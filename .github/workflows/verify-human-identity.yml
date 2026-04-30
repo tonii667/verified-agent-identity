@@ -1,0 +1,62 @@
+name: Verify Human Identity
+
+on:
+  workflow_dispatch:
+    inputs:
+      agent_name:
+        description: 'Nama agent'
+        required: true
+        default: 'Toni'
+      agent_description:
+        description: 'Deskripsi agent'
+        required: true
+        default: 'Toni AI Agent'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install ClawHub skill
+        run: npx clawhub@latest install verified-agent-identity --yes
+
+      - name: Install script dependencies
+        run: |
+          if [ -d scripts ]; then
+            cd scripts
+            npm install
+          else
+            echo "Folder scripts tidak ditemukan!"
+            exit 1
+          fi
+
+      - name: Create new Ethereum Identity
+        run: |
+          if [ -f scripts/createNewEthereumIdentity.js ]; then
+            node scripts/createNewEthereumIdentity.js
+          else
+            echo "File createNewEthereumIdentity.js tidak ditemukan!"
+            exit 1
+          fi
+
+      - name: Link Human to Agent
+        run: |
+          AGENT_NAME="${{ github.event.inputs.agent_name }}"
+          AGENT_DESC="${{ github.event.inputs.agent_description }}"
+          if [ -f scripts/manualLinkHumanToAgent.js ]; then
+            node scripts/manualLinkHumanToAgent.js --challenge "{\"name\": \"$AGENT_NAME\", \"description\": \"$AGENT_DESC\"}"
+          else
+            echo "File manualLinkHumanToAgent.js tidak ditemukan!"
+            exit 1
+          fi
+
+      - name: Write summary
+        run: echo "### Verify Human Identity workflow selesai" >> "$GITHUB_STEP_SUMMARY"
