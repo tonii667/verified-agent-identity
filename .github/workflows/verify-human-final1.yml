@@ -1,0 +1,47 @@
+name: Verify Human Identity
+
+on:
+  workflow_dispatch:
+    inputs:
+      agent_name:
+        description: 'Nama agent'
+        required: true
+        default: 'Toni'
+      agent_description:
+        description: 'Deskripsi agent'
+        required: true
+        default: 'Toni AI Agent'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '24'
+
+      - name: Install ClawHub skill
+        run: npx clawhub@latest install verified-agent-identity --yes
+
+      - name: Install script dependencies
+        run: |
+          if [ -d scripts ]; then
+            cd scripts
+            npm install
+          else
+            echo "Folder scripts tidak ditemukan!"
+            exit 1
+          fi
+
+      - name: Create new Ethereum Identity
+        run: |
+          node scripts/createNewEthereumIdentity.js
+
+      - name: Link Human to Agent
+        run: |
+          node scripts/manualLinkHumanToAgent.js --challenge "{\"name\": \"${{ github.event.inputs.agent_name }}\", \"description\": \"${{ github.event.inputs.agent_description }}\"}"
