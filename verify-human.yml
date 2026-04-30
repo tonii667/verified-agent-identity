@@ -1,0 +1,61 @@
+name: Verify Human Identity
+
+on:
+  workflow_dispatch:
+    inputs:
+      agent_name:
+        description: 'Nama agent'
+        required: true
+        default: 'Toni'
+      agent_description:
+        description: 'Deskripsi agent'
+        required: true
+        default: 'Toni AI Agent'
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '24'
+
+      - name: Step 1 - Install ClawHub skill
+        run: npx clawhub@latest install verified-agent-identity
+
+      - name: Install script dependencies
+        run: |
+          cd scripts
+          npm install
+
+      - name: Step 2 - Create new Ethereum Identity
+        run: |
+          cd scripts
+          node createNewEthereumIdentity.js
+
+      - name: Step 3 - Link Human to Agent
+        run: |
+          cd scripts
+          node manualLinkHumanToAgent.js --challenge "{\"name\": \"${{ github.event.inputs.agent_name }}\", \"description\": \"${{ github.event.inputs.agent_description }}\"}"
+
+      - name: Debug check current directory
+        run: pwd && ls -al
+
+      - name: Optional - Create results.json
+        run: |
+          echo '{}' > results.json
+
+      - name: Upload eval results (optional)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: results.json
